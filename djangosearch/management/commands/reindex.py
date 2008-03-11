@@ -1,5 +1,6 @@
 from optparse import make_option
 from django.core.management.base import AppCommand, CommandError
+from django.utils.encoding import smart_str
 
 DEFAULT_BATCH_SIZE = 1000
 
@@ -40,7 +41,7 @@ class Command(AppCommand):
             total = qs.count()
 
             if self.verbosity >= 1:
-                print "Indexing %d %s" % (total, model._meta.verbose_name_plural)
+                print "Indexing %d %s" % (total, smart_str(model._meta.verbose_name_plural))
 
             for start in range(0, total, self.batchsize):
                 end = min(start + self.batchsize, total)
