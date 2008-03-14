@@ -144,7 +144,7 @@ def get_indexer(model):
     """Return a model indexer for a model."""
     return _model_indexers[model]
 
-def get_indexers(model):
+def get_indexers():
     """Return a dict of model indexers keyed my model."""
     return _model_indexers
 
