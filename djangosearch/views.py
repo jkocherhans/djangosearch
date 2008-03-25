@@ -53,21 +53,10 @@ class SearchView(object):
         paginator = ObjectPaginator(results, RESULTS_PER_PAGE)
 
         context = Context(request, {
-            'results': paginator.get_page(page_number - 1),
             'query': query,
             'form': form,
-            'is_paginated': paginator.pages > 1,
-            'results_per_page': RESULTS_PER_PAGE,
-            'has_next': paginator.has_next_page(page_number - 1),
-            'has_previous': paginator.has_previous_page(page_number - 1),
-            'page': page_number,
-            'next': page_number + 1,
-            'previous': page_number - 1,
-            'last_on_page': paginator.last_on_page(page_number - 1),
-            'first_on_page': paginator.first_on_page(page_number - 1),
-            'pages': paginator.pages,
-            'hits' : paginator.hits,
-            'page_range' : paginator.page_range
+            'page': paginator.page(page_number),
+            'paginator' : paginator
 
         })
         return render_to_response(self.template, context_instance=context)

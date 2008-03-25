@@ -1,23 +1,22 @@
-from django.core.paginator import InvalidPage, ObjectPaginator as BaseObjectPaginator
+from django.core.paginator import InvalidPage, Paginator, Page
 
 
-class ObjectPaginator(BaseObjectPaginator):
-    def __init__(self, results, num_per_page, orphans=0):
+class SearchPaginator(Paginator):
+    def __init__(self, results, per_page, orphans=0, allow_empty_first_page=True):
         self.results = results
-        self.num_per_page = num_per_page
+        self.per_page = per_page
         self.orphans = orphans
-        self._hits = self._pages = None
-        self._page_range = None
+        self.allow_empty_first_page = allow_empty_first_page
+        self._num_pages = self._count = None
 
-    def get_page(self, page_number):
-        page_number = self.validate_page_number(page_number)
-        # Results should already be limited to a single page by the time they
-        # are passed in.
-        return list(self.results)
+    def page(self, number):
+        "Returns a Page object for the given 1-based page number."
+        number = self.validate_number(number)
+        return Page(list(self.results), number, self)
 
-    def _get_hits(self):
-        if self._hits is None:
-            self._hits = self.results.hits
-        return self._hits
-
-    hits = property(_get_hits)
+    def _get_count(self):
+        "Returns the total number of objects, across all pages."
+        if self._count is None:
+            self._count = self.results.hits
+        return self._count
+    count = property(_get_count)
