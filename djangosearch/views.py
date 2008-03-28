@@ -4,7 +4,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext as Context
 from django import newforms as forms
 from djangosearch import search
-from djangosearch.paginator import ObjectPaginator
+from djangosearch.paginator import SearchPaginator
 from djangosearch.indexer import get_indexed_models
 
 RESULTS_PER_PAGE = getattr(settings, 'SEARCH_RESULTS_PER_PAGE', 20)
@@ -50,7 +50,7 @@ class SearchView(object):
 
         # XXX: implement load_all
 
-        paginator = ObjectPaginator(results, RESULTS_PER_PAGE)
+        paginator = SearchPaginator(results, RESULTS_PER_PAGE)
 
         context = Context(request, {
             'query': query,
