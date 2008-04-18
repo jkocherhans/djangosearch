@@ -173,7 +173,7 @@ def _make_parser():
 
     query = Forward()
 
-    term = Word(alphas8bit+alphanums).setResultsName("term")
+    term = Word(alphas8bit+alphanums+"-.!?,:;$&%/").setResultsName("term")
 
     terms = Forward()
     terms << ((term + terms) | term)
