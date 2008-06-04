@@ -21,7 +21,7 @@ class SearchEngine(BaseSearchEngine):
             return 'django_ct_s:"%s.%s"' % (model._meta.app_label, model._meta.module_name)
         return ' OR '.join([qt(model) for model in models])
 
-    def update(self, indexer, iterable):
+    def update(self, indexer, iterable, commit=True):
         docs = []
         try:
             for obj in iterable:
@@ -36,15 +36,15 @@ class SearchEngine(BaseSearchEngine):
         except UnicodeDecodeError:
             print "Chunk failed."
             pass
-        self.conn.add(docs)
+        self.conn.add(docs, commit=commit)
 
-    def remove(self, obj):
+    def remove(self, obj, commit=True):
         solr_id = self.get_identifier(obj)
-        self.conn.delete(id=solr_id)
+        self.conn.delete(id=solr_id, commit=commit)
 
-    def clear(self, models):
+    def clear(self, models, commit=True):
         # *:* matches all docs in Solr
-        self.conn.delete(q='*:*')
+        self.conn.delete(q='*:*', commit=commit)
 
     def _result_callback(self, result):
         app_label, model_name = result['django_ct_s'].split('.')
