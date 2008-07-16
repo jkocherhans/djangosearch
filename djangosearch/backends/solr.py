@@ -29,6 +29,7 @@ class SearchEngine(BaseSearchEngine):
                 doc['id'] = self.get_identifier(obj)
                 doc['django_ct_s'] = "%s.%s" % (obj._meta.app_label, obj._meta.module_name)
                 doc['django_id_s'] = force_unicode(obj.pk)
+                doc['title'] = unicode(obj)
                 doc['text'] = indexer.flatten(obj)
                 for name, value in indexer.get_indexed_fields(obj):
                     doc[name] = value
@@ -48,7 +49,8 @@ class SearchEngine(BaseSearchEngine):
 
     def _result_callback(self, result):
         app_label, model_name = result['django_ct_s'].split('.')
-        return (app_label, model_name, result['django_id_s'], None)
+        return (app_label, model_name, result['django_id_s'], None, 
+                result['title'], '')
 
     def search(self, q, models=None, order_by=RELEVANCE, limit=None, offset=None):
         if len(q) == 0:

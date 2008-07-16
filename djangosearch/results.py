@@ -80,11 +80,14 @@ class SearchResult(object):
     you need the whole result set, use SearchResults.load_all_results()
     instead.
     """
-    def __init__(self, app_label, model_name, pk, score):
+    def __init__(self, app_label, model_name, pk, score, title, summary, text=None):
         self.model = models.get_model(app_label, model_name)
         self.pk = pk
         self.score = score
         self._object = None
+        self.title = title
+        self.summary = summary
+        self.text = text
 
     def __repr__(self):
         return "<SearchResult: %s(pk=%r)>" % (self.model.__name__, self.pk)

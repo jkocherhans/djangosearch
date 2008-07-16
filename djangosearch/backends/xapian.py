@@ -1,7 +1,7 @@
 from datetime import datetime
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from djangosearch.query import RELEVANCE
+from djangosearch.query import RELEVANCE, QueryConverter
 from djangosearch.results import SearchResults
 from djangosearch.backends import base
 
@@ -74,3 +74,12 @@ class SearchEngine(base.SearchEngine):
         db = self._read_only_db()
         # TODO: implement me
         return SearchResults(query, results, self._result_callback)
+
+class XapianQueryConverter(QueryConverter):
+    QUOTES          = '""'
+    GROUPERS        = "()"
+    OR              = " OR "
+    NOT             = "NOT "
+    SEPARATOR       = ' AND '
+    IN_QUOTES_SEP   = ' '
+    FIELDSEP        = ':'

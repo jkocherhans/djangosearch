@@ -1,5 +1,10 @@
-from djangosearch.query import RELEVANCE
+from django.contrib.contenttypes.models import ContentType
 from django.utils.encoding import force_unicode
+from django.utils.text import truncate_words
+
+from djangosearch.models import Document
+from djangosearch.query import RELEVANCE
+from djangosearch.utils import get_summary_length
 
 class SearchEngine(object):
     """
@@ -32,3 +37,35 @@ class SearchEngine(object):
         sending it to the search engine. By default, just force it to unicode.
         """
         return force_unicode(value)
+        
+
+class DocumentSearchEngine(SearchEngine):
+    """
+    A search base class for use with the Document model.
+    """
+    
+    def _result_callback(self, result):
+        return (result.content_type.app_label, result.content_type.model, 
+                result.object_id, result.relevance, result.title, 
+                truncate_words(result.text, get_summary_length()), 
+                result.text)
+    
+    def update(self, indexer, iterable):
+        for obj in iterable:
+            content_type = ContentType.objects.get_for_model(obj)
+            doc, created = Document.objects.get_or_create(
+                                content_type=content_type, object_id=obj.pk)
+            doc.title = unicode(obj)
+            doc.text = indexer.flatten(obj)
+            doc.save()
+    
+    def remove(self, obj):
+        content_type = ContentType.objects.get_for_model(obj)
+        try:
+            Document.objects.get(content_type=content_type,
+                                 object_id=obj.pk).delete()
+        except Document.DoesNotExist:
+            pass
+    
+    def clear(self, models):
+        Document.objects.all().delete()
