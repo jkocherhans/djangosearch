@@ -24,9 +24,11 @@ class SearchResults(object):
         """Get an item or slice from the result set."""
         if isinstance(k, slice):
             new_iter = islice(self.iterator, k.start, k.stop, k.step)
-            return SearchResults(new_iter, self.callback)
+            return SearchResults(self.query, new_iter, self.hits, self.callback)
+        elif isinstance(k, int):
+            return SearchResult(*self.callback(self.iterator[k]))
         else:
-            return list(islice(self.iterator, k, k+1))[0]
+            raise TypeError
 
     def __repr__(self):
         return "<SearchResults for %r>" % self.query
