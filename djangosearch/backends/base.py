@@ -3,7 +3,6 @@ from django.utils.encoding import force_unicode
 from django.utils.text import truncate_words
 
 from djangosearch.models import Document
-from djangosearch.query import RELEVANCE
 from djangosearch.utils import get_summary_length
 
 class SearchEngine(object):
@@ -28,7 +27,7 @@ class SearchEngine(object):
     def clear(self, models):
         raise NotImplementedError
 
-    def search(self, query, models=None, order_by=RELEVANCE, limit=None, offset=None):
+    def search(self, query, models=None, order_by=["-relevance"], limit=None, offset=None):
         raise NotImplementedError
 
     def prep_value(self, db_field, value):
@@ -43,12 +42,6 @@ class DocumentSearchEngine(SearchEngine):
     """
     A search base class for use with the Document model.
     """
-    
-    def _result_callback(self, result):
-        return (result.content_type.app_label, result.content_type.model, 
-                result.object_id, result.relevance, result.title, 
-                truncate_words(result.text, get_summary_length()), 
-                result.text)
     
     def update(self, indexer, iterable):
         for obj in iterable:

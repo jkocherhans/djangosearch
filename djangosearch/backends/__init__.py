@@ -10,11 +10,14 @@ __all__ = ['backend']
 if not hasattr(settings, "SEARCH_ENGINE"):
     raise ImproperlyConfigured("You must define the SEARCH_ENGINE setting before using the search framework.")
 
-try:
+#try:
+if True:
     # Most of the time, the search backend will be one of the  
     # backends that ships with django-search, so look there first.
     backend = __import__('djangosearch.backends.%s' % settings.SEARCH_ENGINE, {}, {}, [''])
-except ImportError, e:
+# FIXME: this gets risen on ImportErrors in the backend
+#except ImportError, e:
+if False:
     # If the import failed, we might be looking for a search backend 
     # distributed external to django-search. So we'll try that next.
     try:

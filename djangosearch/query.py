@@ -9,7 +9,6 @@ except ImportError:
 import pyparsing
 
 START, END, TERM = ("start", "end", "term")
-RELEVANCE = 0
 
 class QueryConverter(object):
     """

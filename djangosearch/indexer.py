@@ -2,7 +2,8 @@ from django.db.models import signals
 from django.dispatch import dispatcher
 from django.utils.encoding import smart_unicode
 from django.template import loader, Context, TemplateDoesNotExist
-from djangosearch.query import RELEVANCE
+
+from djangosearch.results import SearchResults
 
 class ModelIndex(object):
 
@@ -119,9 +120,9 @@ class ModelIndex(object):
         self.clear()
         self.update()
 
-    def search(self, q, order_by=RELEVANCE, limit=None, offset=None):
+    def search(self, q):
         """Search the index."""
-        return self.engine.search(q, models=[self.model], order_by=order_by, limit=limit, offset=offset)
+        return SearchResults(q, models=[self.model])
 
 class ModelIndexDescriptor(object):
     # This class ensures indexes aren't accessible via model instances.

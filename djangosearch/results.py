@@ -5,51 +5,68 @@ class SearchResults(object):
     """
     Encapsulates some search results from a backend.
     
-    Expects to be initalized with the original query string, an interator that
-    yields "hits", the total number of hits, and a callback that will resolve
-    those hits into (app_label, module_name, pk, score) tuples.
+    Expects to be initalized with a query string or a SearchQuery object.
     """
 
-    def __init__(self, query, iterator, hits, resolve_object_callback):
+    def __init__(self, query, models):
         self.query = query
-        self.iterator = iterator
-        self.hits = hits
-        self.callback = resolve_object_callback
-
+        self.models = models
+        from djangosearch.backends import backend
+        self.backend = backend
+        self.order_by = ["-relevance"]
+        self.offset = 0
+        self.limit = None
+        
+        self._result_cache = None
+        
     def __iter__(self):
-        for i in self.iterator:
-            yield SearchResult(*self.callback(i))
-
+        return iter(self._get_results())
+    
+    def __len__(self):
+        return len(self._get_results())
+    
     def __getitem__(self, k):
         """Get an item or slice from the result set."""
-        if isinstance(k, slice):
-            new_iter = islice(self.iterator, k.start, k.stop, k.step)
-            return SearchResults(self.query, new_iter, self.hits, self.callback)
-        elif isinstance(k, int):
-            return SearchResult(*self.callback(self.iterator[k]))
-        else:
+        if not isinstance(k, (slice, int)):
             raise TypeError
-
+        assert (not isinstance(k, slice) and (k >= 0)) \
+            or (isinstance(k, slice) and (k.start is None or k.start >= 0) and (k.stop is None or k.stop >= 0)), \
+            "Negative indexing is not supported."
+        if isinstance(k, slice):
+            # TODO: this should be relative to current offset/limit
+            obj = self._clone()
+            if k.start is not None:
+                obj.offset = int(k.start)
+            if k.stop is not None:
+                obj.limit = int(k.stop) - obj.offset
+            return k.step and list(obj)[::k.step] or obj
+        return list(self._clone(offset=k, limit=1))[0]
+    
     def __repr__(self):
         return "<SearchResults for %r>" % self.query
-
-    def load_all_results(self):
+    
+    # Methods that return SearchResults
+    def all(self):
+        return self
+    
+    def load_objects(self):
         """
-        Load all result objects from the database.
-        
-        Returns a list of SearchResult objects with the object pre-loaded.
+        Returns a SearchResults with all objects in the results lodaded from 
+        the database.
         
         This has better performance than the O(N) queries that iterating over
         the result set and doing ``result.object`` does; this does one
         ``in_bulk()`` call for each model in the result set.
         """
+        # TODO: this is useless. this should be done in _get_results()
         original_results = []
         models_pks = {}
 
         # Remember the search position for each result so we don't have to resort later.
         for result in self:
-            original_results.append(result)
-            models_pks.setdefault(result.model, []).append(result.pk)
+            if not result._object:
+                original_results.append(result)
+                models_pks.setdefault(result.model, []).append(result.pk)
 
         # Load the objects for each model in turn
         loaded_objects = {}
@@ -70,26 +87,50 @@ class SearchResults(object):
                 # The object must have been deleted since we indexed; fail silently.
                 continue
 
-            yield result
-
+            return self
+    
+    # Methods that don't return SearchResults
+    def count(self):
+        return self.backend.SearchEngine().count(self.query, self.models)
+    
+    
+    def _get_results(self):
+        """
+        Attempts to fetch a cached list of results, otherwise it runs the
+        backends search() method.
+        """
+        if self._result_cache is None:
+            self._result_cache = self.backend.SearchEngine().search(self.query, self.models, self.order_by, self.limit, self.offset)
+        return self._result_cache
+    
+    def _clone(self, **kwargs):
+        c = self.__class__(query=self.query, models=self.models)
+        c.order_by = self.order_by
+        c.offset = self.offset
+        c.limit = self.limit
+        c.__dict__.update(kwargs)
+        return c
+    
 class SearchResult(object):
     """
-    A single search result. The actual object is loaded lazily by accessing
-    object; until then this object only stores the model, pk, and score.
+    A single search result. If obj is supplied as a (app, model, pk) tuple, 
+    the actual object is loaded lazily by accessing object.
     
-    Note that iterating over SearchResults and getting the object for each
-    result will do O(N) database queries -- not such a great idea. If you know
-    you need the whole result set, use SearchResults.load_all_results()
-    instead.
+    Note that if using tuples, iterating over SearchResults and getting the 
+    object for each result will do O(N) database queries -- not such a great 
+    idea. If you know you need the whole result set, use 
+    SearchResults.load_all_results() instead.
     """
-    def __init__(self, app_label, model_name, pk, score, title, summary, text=None):
-        self.model = models.get_model(app_label, model_name)
-        self.pk = pk
+    def __init__(self, obj, score):
+        if isinstance(obj, tuple):
+            self.model = models.get_model(obj[0], obj[1])
+            self.pk = obj[2]
+            self._object = None
+        else:
+            self.model = obj.__class__
+            self.pk = obj.pk
+            self._object = obj
         self.score = score
-        self._object = None
-        self.title = title
-        self.summary = summary
-        self.text = text
 
     def __repr__(self):
         return "<SearchResult: %s(pk=%r)>" % (self.model.__name__, self.pk)
@@ -102,3 +143,4 @@ class SearchResult(object):
 
     def content_type(self):
         return unicode(self.model._meta)
+
