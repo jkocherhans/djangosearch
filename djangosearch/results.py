@@ -8,11 +8,11 @@ class SearchResults(object):
     Expects to be initalized with a query string or a SearchQuery object.
     """
 
-    def __init__(self, query, models):
+    def __init__(self, query, models=None):
         self.query = query
         self.models = models
         from djangosearch.backends import backend
-        self.backend = backend
+        self.engine = backend.SearchEngine()
         self.order_by = ["-relevance"]
         self.offset = 0
         self.limit = None
@@ -91,8 +91,12 @@ class SearchResults(object):
     
     # Methods that don't return SearchResults
     def count(self):
-        return self.backend.SearchEngine().count(self.query, self.models)
-    
+        if self._result_cache:
+            return len(self._result_cache)
+        try:
+            return self.engine.get_count(self.query, self.models, self.limit, self.offset)
+        except NotImplementedError:
+            return len(self._get_results())
     
     def _get_results(self):
         """
@@ -100,7 +104,7 @@ class SearchResults(object):
         backends search() method.
         """
         if self._result_cache is None:
-            self._result_cache = self.backend.SearchEngine().search(self.query, self.models, self.order_by, self.limit, self.offset)
+            self._result_cache = self.engine.get_results(self.query, self.models, self.limit, self.offset, self.order_by)
         return self._result_cache
     
     def _clone(self, **kwargs):

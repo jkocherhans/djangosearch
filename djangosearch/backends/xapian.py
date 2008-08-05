@@ -76,6 +76,7 @@ class SearchEngine(base.SearchEngine):
         return SearchResults(query, results, self._result_callback)
 
 class XapianQueryConverter(QueryConverter):
+    # http://xapian.org/docs/queryparser.html
     QUOTES          = '""'
     GROUPERS        = "()"
     OR              = " OR "

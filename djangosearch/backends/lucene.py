@@ -160,6 +160,7 @@ class SearchEngine(base.SearchEngine):
         return hit.get(IDENTIFIER_FIELD).split(".") + [hit.getScore()]
         
 class LuceneQueryConverter(QueryConverter):
+    # http://lucene.apache.org/java/docs/queryparsersyntax.html
     QUOTES          = '""'
     GROUPERS        = "()"
     OR              = " "

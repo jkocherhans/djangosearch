@@ -3,8 +3,6 @@ from django.dispatch import dispatcher
 from django.utils.encoding import smart_unicode
 from django.template import loader, Context, TemplateDoesNotExist
 
-from djangosearch.results import SearchResults
-
 class ModelIndex(object):
 
     def __init__(self, fields=[], model=None):
@@ -120,9 +118,9 @@ class ModelIndex(object):
         self.clear()
         self.update()
 
-    def search(self, q):
+    def search(self, query):
         """Search the index."""
-        return SearchResults(q, models=[self.model])
+        return self.engine.search(query, models=[self.model])
 
 class ModelIndexDescriptor(object):
     # This class ensures indexes aren't accessible via model instances.
