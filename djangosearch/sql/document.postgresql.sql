@@ -1,1 +1,0 @@
-CREATE INDEX djangosearch_document_text ON djangosearch_document USING gin(to_tsvector('english', text));

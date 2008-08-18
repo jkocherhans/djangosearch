@@ -10,7 +10,61 @@ import pyparsing
 
 START, END, TERM = ("start", "end", "term")
 
-class QueryConverter(object):
+class SearchQuery(object):
+    """
+    A search query.
+    
+    Expects to be initialised with a query string in common query format,    
+    and an optional list of models to limit the search to.
+    """
+    def __init__(self, query, models=None):
+        self.query = query
+        self.models = models
+    
+        self.order_by = ["-relevance"]
+        self.low_mark, self.high_mark = 0, None  # Used for offset/limit
+    
+    def __str__(self):
+        return self.query
+        
+    def __repr__(self):
+        return "<SearchQuery for %r>" % self.query
+    
+    def clone(self, **kwargs):
+        c = self.__class__(query=self.query, models=self.models)
+        c.order_by = self.order_by
+        c.low_mark = self.low_mark
+        c.high_mark = self.high_mark
+        c.__dict__.update(kwargs)
+        return c
+    
+    def set_limits(self, low=None, high=None):
+        """
+        Adjusts the limits on the results retrieved. We use low/high to set 
+        these, as it makes it more Pythonic to read and write.
+
+        Any limits passed in here are applied relative to the existing
+        constraints. So low is added to the current low value and both will be
+        clamped to any existing high value.
+        """
+        if high is not None:
+            if self.high_mark:
+                self.high_mark = min(self.high_mark, self.low_mark + high)
+            else:
+                self.high_mark = self.low_mark + high
+        if low is not None:
+            if self.high_mark:
+                self.low_mark = min(self.high_mark, self.low_mark + low)
+            else:
+                self.low_mark = self.low_mark + low
+
+    def clear_limits(self):
+        """
+        Clears any existing limits.
+        """
+        self.low_mark, self.high_mark = 0, None
+
+class BaseQueryConverter(object):
     """
     Abstract search query converter base class. This will actually work, if by
     "work" you mean "echo the orginal query string"...

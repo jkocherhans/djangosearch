@@ -5,25 +5,30 @@ Tests applicable to all search engines.
 >>> a = Article(title='test', date=datetime(2007, 10, 31))
 
 >>> print Article.index.flatten(a)
-None
 test
-2007-10-31 00:00:00
 
->>> Article.index.get_indexed_fields(a)
-[('title', 'test'), ('date', datetime.datetime(2007, 10, 31, 0, 0))]
+# FIXME: these might not necessarily be constant across backends thanks to 
+# prep_value
+>>> Article.index.get_field_values(a)
+{'date': u'2007-10-31 00:00:00'}
+
+>>> print Article.index.get_text_values(a)
+{'title': u'test'}
 
 """
 
+# TODO: dummy backend tests
+
 from django.conf import settings
 from django.db import models
-from djangosearch import ModelIndex
+import djangosearch
 
 
 class Article(models.Model):
     title = models.CharField(max_length=255)
     date = models.DateField()
 
-    index = ModelIndex(fields=['title', 'date'])
+    index = djangosearch.ModelIndex(text=['title'], additional=['date'])
 
     def __unicode__(self):
         return self.title
@@ -33,16 +38,18 @@ class Event(models.Model):
     date = models.DateField()
     is_outdoors = models.BooleanField()
 
-    index = ModelIndex(fields=['title', 'date', 'is_outdoors'])
-
+    index = djangosearch.ModelIndex(text=['title'], 
+                                    additional=['date', 'is_outdoors'])
+    
     def __unicode__(self):
         return self.title
 
 # Load the backend specific tests
-if settings.SEARCH_ENGINE == 'estraier':
-    from djangosearch.tests import estraier as backend_tests
-elif settings.SEARCH_ENGINE == 'solr':
-    from djangosearch.tests import solr as backend_tests
+backends = ['mysql', 'postgresql', 'solr']
+
+if settings.SEARCH_ENGINE in backends:
+    backend_tests = __import__('djangosearch.tests.%s' % settings.SEARCH_ENGINE, 
+            {}, {}, [''])
 else:
     backend_tests = None
 

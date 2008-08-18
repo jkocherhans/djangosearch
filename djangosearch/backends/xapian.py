@@ -33,7 +33,7 @@ class SearchEngine(base.SearchEngine):
             # Index the object.
             indexer.flatten(object)
             # Index field values.
-            for name, value in indexer.get_indexed_fields(obj):
+            for name, value in indexer.get_field_values(obj).items():
                 doc.add_term(name.upper(), value)
                 #doc.add_value(0, value)
             db = self._read_write_db()

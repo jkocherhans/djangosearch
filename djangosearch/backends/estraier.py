@@ -4,7 +4,6 @@ from django.core.exceptions import ImproperlyConfigured
 from djangosearch.backends import base
 from djangosearch.results import SearchResults
 from djangosearch.query import QueryConverter
-from search import RELEVANCE
 import httplib2
 
 # http://pypi.python.org/pypi/hyperestraier
@@ -73,7 +72,7 @@ class SearchEngine(base.SearchEngine):
             doc.dtexts = []
             doc.add_text(indexer.flatten(obj))
             # Index field values
-            for name, value in indexer.get_indexed_fields(obj):
+            for name, value in indexer.get_field_values(obj).items():
                 doc.add_attr(name, value)
             # print out the doc that's getting posted to hyperestraier cause
             # it's nice to see while I'm still developing

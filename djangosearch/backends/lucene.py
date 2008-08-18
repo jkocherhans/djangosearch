@@ -96,7 +96,7 @@ class SearchEngine(base.SearchEngine):
             doc.add(PyLucene.Field(CONTENTS_FIELD, indexer.flatten(o), STORE_NO, TOKENIZED))
         
             # Index each field that needs to be individually searchable.
-            for (name, value) in indexer.get_indexed_fields(o):
+            for (name, value) in indexer.get_field_values(o).items():
                 doc.add(PyLucene.Field(name, value, STORE_NO, TOKENIZED))
                 
             self._index.addDocument(doc)

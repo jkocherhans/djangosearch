@@ -1,11 +1,14 @@
-from datetime import datetime, date
-from pysolr import Solr
-from django.conf import settings
-from django.utils.encoding import force_unicode
-from djangosearch.query import QueryConverter, convert as convert_query
-from djangosearch.results import SearchResults, SearchResult
-from djangosearch.backends.base import SearchEngine as BaseSearchEngine
+import itertools
+import pysolr
 
+from django.conf import settings
+from django.db import models
+from django.utils.encoding import force_unicode
+from djangosearch.backends import BaseSearchEngine, search
+from djangosearch.query import BaseQueryConverter, convert
+from djangosearch.results import SearchResults
+
+MAX_INT = 2**31 - 1
 
 # TODO: Support for using Solr dynnamicField declarations, the magic fieldname
 # postfixes like _i for integers. Requires some sort of global field registry
@@ -14,7 +17,7 @@ from djangosearch.backends.base import SearchEngine as BaseSearchEngine
 class SearchEngine(BaseSearchEngine):
     def __init__(self):
         args = [settings.SOLR_URL]
-        self.conn = Solr(*args)
+        self.conn = pysolr.Solr(*args)
 
     def _models_query(self, models):
         def qt(model):
@@ -24,14 +27,13 @@ class SearchEngine(BaseSearchEngine):
     def update(self, indexer, iterable, commit=True):
         docs = []
         try:
-            for obj in iterable:
+            for obj in itertools.ifilter(indexer.should_index, iterable):
                 doc = {}
                 doc['id'] = self.get_identifier(obj)
                 doc['django_ct_s'] = "%s.%s" % (obj._meta.app_label, obj._meta.module_name)
                 doc['django_id_s'] = force_unicode(obj.pk)
-                #doc['title'] = unicode(obj)
                 doc['text'] = indexer.flatten(obj)
-                for name, value in indexer.get_indexed_fields(obj):
+                for name, value in indexer.get_additional_values(obj).items():
                     doc[name] = value
                 docs.append(doc)
         except UnicodeDecodeError:
@@ -47,56 +49,56 @@ class SearchEngine(BaseSearchEngine):
         # *:* matches all docs in Solr
         self.conn.delete(q='*:*', commit=commit)
     
-    def search(self, query, models=None):
-        return SearchResults(query, models)
-    
-    def get_results(self, query, *args, **kwargs):
-        if len(query) == 0:
+    def get_results(self, query):
+        if len(str(query)) == 0:
             return []
-        solr_results = self._get_results_obj(query, *args, **kwargs)
+        solr_results = self._get_results_obj(query)
         results = []
         for result in solr_results:
             app_label, model_name = result['django_ct_s'].split('.')
-            results.append(SearchResult(
-                    (app_label, model_name, result['django_id_s']),
-                    None)) # FIXME: result['score'] doesn't work for some reason
+            results.append({
+                "model": models.get_model(app_label, model_name),
+                "pk": result['django_id_s'],
+                "relevance": None}) # FIXME: result['score'] doesn't work for some reason 
         return results
     
-    def get_count(self, query, *args, **kwargs):
-        if len(query) == 0:
+    def get_count(self, query):
+        if len(str(query)) == 0:
             return 0
         # if the SearchResults object covers the whole result set, just fetch
         # the number of hits and no results
-        if not limit and not offset:
-            kwargs['limit'] = 0
-            return self._get_results_obj(query, *args, **kwargs).hits
+        if query.high_mark is None and not query.low_mark:
+            return self._get_results_obj(query.clone(high_mark=0)).hits
         # otherwise, trigger get_results()
         raise NotImplementedError
     
-    def _get_results_obj(self, query, models=None, limit=None, offset=None, order_by=["-relevance"]):
-        original_query = query
-        query = convert_query(original_query, SolrQueryConverter)
-        if models is not None:
-            models_clause = self._models_query(models)
-            final_q = '(%s) AND (%s)' % (query, models_clause)
+    def _get_results_obj(self, query):
+        query.query
+        conv_query = convert(str(query), QueryConverter)
+        if query.models is not None:
+            models_clause = self._models_query(query.models)
+            final_q = '(%s) AND (%s)' % (conv_query, models_clause)
         else:
-            final_q = query
+            final_q = conv_query
         kwargs = {}
         sort = []
-        for s in order_by:
+        for s in query.order_by:
             if s[0] == '-':
                 sort.append('%s desc' % s[1:].replace("relevance", "score"))
             else:
                 sort.append('%s asc' % s.replace("relevance", "score"))
-        kwargs['sort'] = ", ".join(sort)   
-        if limit is not None:
-            kwargs['rows'] = limit
-        if offset is not None:
-            kwargs['start'] = offset
+        if sort:
+            kwargs['sort'] = ", ".join(sort)
+        if query.high_mark is not None:
+            kwargs['rows'] = query.high_mark - query.low_mark
+        else:
+            kwargs['rows'] = MAX_INT
+        if query.low_mark:
+            kwargs['start'] = query.low_mark
         return self.conn.search(final_q, **kwargs)
 
 
-class SolrQueryConverter(QueryConverter):
+class QueryConverter(BaseQueryConverter):
     # http://wiki.apache.org/solr/SolrQuerySyntax
     QUOTES          = '""'
     GROUPERS        = "()"
