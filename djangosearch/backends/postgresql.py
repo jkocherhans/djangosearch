@@ -8,8 +8,10 @@ from djangosearch.query import BaseQueryConverter, convert_new
 
 qn = connection.ops.quote_name
 
-if settings.DATABASE_ENGINE != "postgresql":
-    raise ImproperlyConfigured('The postgresql search engine requires the postgresql database engine.')
+if settings.DATABASE_ENGINE not in ("postgresql", "postgresql_psycopg2"):
+    raise ImproperlyConfigured('The postgresql search engine requires the '
+                               'postgresql or postgresql_psycopg2 database '
+                               'engine.')
 
 def search(query, models=None):
     assert models and len(models) == 1, \

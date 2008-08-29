@@ -30,7 +30,7 @@ class ModelIndex(object):
     """
     def __init__(self, text=None, additional=[], model=None):
         self.text = text
-        self.addtional = additional
+        self.additional = additional
         self.model = model
         
         # Avoid a circular import by putting this here

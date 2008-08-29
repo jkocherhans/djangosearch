@@ -9,7 +9,7 @@ test
 
 # FIXME: these might not necessarily be constant across backends thanks to 
 # prep_value
->>> Article.index.get_field_values(a)
+>>> Article.index.get_additional_values(a)
 {'date': u'2007-10-31 00:00:00'}
 
 >>> print Article.index.get_text_values(a)
