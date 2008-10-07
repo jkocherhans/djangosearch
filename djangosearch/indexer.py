@@ -1,5 +1,4 @@
 from django.db.models import signals
-from django.dispatch import dispatcher
 from django.utils.encoding import smart_unicode
 from django.template import loader, Context, TemplateDoesNotExist
 from djangosearch.query import RELEVANCE
@@ -15,8 +14,8 @@ class ModelIndex(object):
 
     def contribute_to_class(self, model, name):
         self.model = model
-        dispatcher.connect(self.update_object, signals.post_save, sender=model)
-        dispatcher.connect(self.remove_object, signals.post_delete, sender=model)
+        signals.post_save.connect(self.update_object,sender=model)
+        signals.post_delete.connect(self.remove_object, sender=model)
         setattr(model, name, ModelIndexDescriptor(self))
         register_indexer(model, self)
 
@@ -99,14 +98,14 @@ class ModelIndex(object):
         """Update the entire index"""
         self.engine.update(self, self.get_query_set())
 
-    def update_object(self, instance):
+    def update_object(self, instance, **kwargs):
         """
         Update the index for a single object. Attached to the class's
         post-save hook.
         """
         self.engine.update(self, [instance])
 
-    def remove_object(self, instance):
+    def remove_object(self, instance, **kwargs):
         """Remove an object from the index. Attached to the class's delete hook."""
         self.engine.remove(instance)
 
