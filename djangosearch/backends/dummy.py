@@ -2,7 +2,7 @@
 A fake backend for mocking during tests.
 """
 
-from djangosearch.backends.base import SearchEngine as BaseSearchEngine, search
+from djangosearch.backends import SearchEngine as BaseSearchEngine, search
 
 class SearchEngine(BaseSearchEngine):
 
